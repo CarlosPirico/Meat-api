@@ -11,5 +11,10 @@
       "/node_modules/@types",
       "/Types/"
     ]
-  }
+  },
+  "ts-node": {
+		"files": true,
+		"transpileOnly": true,
+		"experimentalResolver": true
+	}
 }

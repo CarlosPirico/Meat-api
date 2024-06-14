@@ -1,11 +1,21 @@
 import * as restify from 'restify';
+import * as mongoose from 'mongoose';
+
 import { environment } from '../common/environment';
+import { Router } from '../common/router';
 
 export class Server {
 
     application: restify.Server;
 
-    initRoutes(): Promise<any>{
+    initializeDb(): mongoose.MongooseThenable {
+        (<any>mongoose).Promise = global.Promise
+        return mongoose.connect(environment.db.url, {
+            useMongoClient: true
+        })
+    }
+
+    initRoutes(routers: Router[]): Promise<any>{
         return new Promise((resolve, reject)=>{
             try{
                 this.application = restify.createServer({
@@ -15,24 +25,13 @@ export class Server {
                 
                 this.application.use(restify.plugins.queryParser())
 
+                //Router
+                for (let router of routers) {
+                    router.applyRoutes(this.application);
+                }
+
                 this.application.listen(environment.server.port, ()=>{
                     resolve(this.application);
-                })
-
-                this.application.get('/info', (req, resp, next)=>{
-                    //resp.contentType = 'application/json';
-                    //resp.status(400);
-                    // resp.setHeader('contentType', 'application/json');
-                    //resp.send({message: 'hello'});
-                    resp.json({
-                        browser: req.userAgent(),
-                        method: req.method,
-                        url: req.url,
-                        url1: req.href(),
-                        path: req.path(),
-                        query: req.query
-                    })
-                    return next();
                 })
             }catch(error){
                 reject(error)
@@ -40,7 +39,8 @@ export class Server {
         })
     }
 
-    bootstrap(): Promise<Server>{
-        return this.initRoutes().then(()=> this)
+    bootstrap(routers: Router[] = []): Promise<Server>{
+        return this.initializeDb().then(()=>
+               this.initRoutes(routers).then(()=> this))
     }
 }
